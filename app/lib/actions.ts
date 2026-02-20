@@ -1,33 +1,34 @@
 'use server'
-
 import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
 
-// 获取所有待办事项
 export async function getTodos() {
   try {
-    // 就像在命令行里喊话一样：从 todos 表里把内容都拿出来
-    const { rows } = await sql`SELECT content FROM todos ORDER BY id DESC`;
-    return rows.map(row => row.content);
+    // 拿到所有列：id, content, completed
+    const { rows } = await sql`SELECT * FROM todos ORDER BY id DESC`;
+    return rows; 
   } catch (error) {
-    console.error('读取数据库失败:', error);
+    console.error('读取失败:', error);
     return [];
   }
 }
 
-// 添加待办事项
 export async function addTodo(formData: FormData) {
   const todo = formData.get('todo') as string;
-
   if (todo) {
-    try {
-      // 插入一条新数据：把任务存进 todos 表的 content 列
-      await sql`INSERT INTO todos (content) VALUES (${todo})`;
-      
-      console.log('✅ 成功存入云端数据库');
-      revalidatePath('/'); // 刷新页面数据
-    } catch (error) {
-      console.log('❌ 存入失败:', error);
-    }
+    await sql`INSERT INTO todos (content) VALUES (${todo})`;
+    revalidatePath('/');
   }
+}
+
+// 新增：删除功能
+export async function deleteTodo(id: number) {
+  await sql`DELETE FROM todos WHERE id = ${id}`;
+  revalidatePath('/');
+}
+
+// 新增：切换完成状态
+export async function toggleTodo(id: number, currentStatus: boolean) {
+  await sql`UPDATE todos SET completed = ${!currentStatus} WHERE id = ${id}`;
+  revalidatePath('/');
 }
